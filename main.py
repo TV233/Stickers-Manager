@@ -42,7 +42,7 @@ class ImageViewer(QWidget):
             self.layout.addWidget(label, row, col)
 
             col += 1
-            if col == 7:  # 每行最多显示6张图片
+            if col == 7:  # 每行最多显示7张图片
                 col = 0
                 row += 1
 
