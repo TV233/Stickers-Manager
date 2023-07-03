@@ -1,8 +1,9 @@
 import os
 import glob
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QApplication
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea
 from PyQt5.QtGui import QPixmap, QClipboard
 from PyQt5.QtCore import Qt
+from PyQt5 import uic
 
 class ImageViewer(QWidget):
     def __init__(self):
@@ -10,6 +11,7 @@ class ImageViewer(QWidget):
         self.initUI()
 
     def initUI(self):
+        uic.loadUi('k.ui', self)  # 加载UI文件
         self.setWindowTitle('Stickers Manager Beta')
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setWidgetResizable(True)
@@ -22,8 +24,8 @@ class ImageViewer(QWidget):
         self.container.setLayout(self.layout)
 
         self.loadImages()
-
-        self.setGeometry(100, 100, 1400, 800)  # 设置程序窗口的初始大小
+        # 设置程序窗口的初始大小
+        self.setGeometry(100, 100, 1400, 800)  
         self.show()
 
     def loadImages(self):
