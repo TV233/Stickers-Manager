@@ -34,9 +34,19 @@ class ImageViewer(QWidget):
         self.show()
 
     def loadGroups(self):
-        # 获取所有图片组文件夹
-        groups = glob.glob('data/group*')
-        groups = sorted([os.path.basename(g) for g in groups])  # 只获取文件夹名
+        # 获取data目录下的所有文件夹
+        data_path = 'data'
+        groups = []
+        # 遍历data目录下的所有项目
+        for item in os.listdir(data_path):
+            item_path = os.path.join(data_path, item)
+            # 只添加文件夹
+            if os.path.isdir(item_path):
+                groups.append(item)
+        
+        # 排序文件夹名称
+        groups.sort()
+        
         self.groupComboBox.clear()  # 清除UI中的默认项
         self.groupComboBox.addItems(groups)
 
