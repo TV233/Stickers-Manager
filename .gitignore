@@ -1,1 +1,17 @@
+# 忽略数据文件夹
 data/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyQt
+*.ui.venv/
+
+.venv/
