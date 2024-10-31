@@ -14,10 +14,8 @@ class ImageViewer(QWidget):
         uic.loadUi('k.ui', self)  # 加载UI文件
         self.setWindowTitle('Stickers Manager Beta')
         
-        # 添加 ComboBox 用于选择图片组
-        self.groupComboBox = QComboBox(self)
-        self.groupComboBox.move(10, 10)
-        self.groupComboBox.setFixedWidth(180)
+        # 使用UI文件中的ComboBox，不再手动创建
+        self.groupComboBox = self.findChild(QComboBox, 'comboBox')  # 假设UI中的ComboBox对象名为'comboBox'
         self.loadGroups()
         self.groupComboBox.currentIndexChanged.connect(self.onGroupChanged)
         
@@ -39,6 +37,7 @@ class ImageViewer(QWidget):
         # 获取所有图片组文件夹
         groups = glob.glob('data/group*')
         groups = sorted([os.path.basename(g) for g in groups])  # 只获取文件夹名
+        self.groupComboBox.clear()  # 清除UI中的默认项
         self.groupComboBox.addItems(groups)
 
     def onGroupChanged(self, index):
