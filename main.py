@@ -1,10 +1,32 @@
 import os
 import glob
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QComboBox
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QComboBox, QDialog
 from PyQt5.QtGui import QPixmap, QClipboard, QMovie
-from PyQt5.QtCore import Qt, QMimeData
+from PyQt5.QtCore import Qt, QMimeData, QUrl, QTimer
 from PyQt5 import uic
-from PyQt5.QtCore import QUrl
+
+class PreviewDialog(QDialog):
+    def __init__(self, image_path, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("GIF Preview")
+        self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
+        
+        # 创建预览标签
+        self.preview_label = QLabel(self)
+        layout = QGridLayout(self)
+        layout.addWidget(self.preview_label)
+        
+        # 加载原始GIF
+        self.movie = QMovie(image_path)
+        # 获取GIF原始尺寸
+        self.movie.jumpToFrame(0)
+        size = self.movie.currentImage().size()
+        self.preview_label.setFixedSize(size)
+        self.preview_label.setMovie(self.movie)
+        self.movie.start()
+        
+        # 调整窗口大小以适应内容
+        self.adjustSize()
 
 class ImageLabel(QLabel):
     def __init__(self, parent=None):
@@ -12,22 +34,37 @@ class ImageLabel(QLabel):
         self.movie = None
         self.static_pixmap = None
         self.original_image_path = None
+        self.preview_dialog = None
+        # 添加预览延时定时器
+        self.preview_timer = QTimer(self)
+        self.preview_timer.setSingleShot(True)  # 设置为单次触发
+        self.preview_timer.timeout.connect(self.showPreview)
+        self.preview_delay = 300  # 300毫秒延时
 
     def enterEvent(self, event):
         if self.original_image_path and self.original_image_path.lower().endswith('.gif'):
-            self.movie = QMovie(self.original_image_path)
-            self.movie.setScaledSize(self.size())
-            self.setMovie(self.movie)
-            self.movie.start()
+            # 启动延时定时器
+            self.preview_timer.start(self.preview_delay)
         event.accept()
 
     def leaveEvent(self, event):
-        if self.movie:
-            self.movie.stop()
-            self.setMovie(None)
-            self.movie = None
-            self.setPixmap(self.static_pixmap)
+        # 取消定时器
+        self.preview_timer.stop()
+        if self.preview_dialog:
+            self.preview_dialog.close()
+            self.preview_dialog = None
         event.accept()
+
+    def showPreview(self):
+        # 创建预览窗口
+        if not self.preview_dialog:
+            self.preview_dialog = PreviewDialog(self.original_image_path, self.window())
+            
+            # 计算预览窗口位置
+            global_pos = self.mapToGlobal(self.rect().topRight())
+            self.preview_dialog.move(global_pos)
+            
+        self.preview_dialog.show()
 
 class ImageViewer(QWidget):
     def __init__(self):
