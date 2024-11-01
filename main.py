@@ -75,8 +75,8 @@ class ImageViewer(QWidget):
         uic.loadUi('k.ui', self)  # 加载UI文件
         self.setWindowTitle('Stickers Manager Beta')
         
-        # 使用UI文件中的ComboBox，不再手动创建
-        self.groupComboBox = self.findChild(QComboBox, 'comboBox')  # 假设UI中的ComboBox对象名为'comboBox'
+        # 使用UI文件中的ComboBox
+        self.groupComboBox = self.findChild(QComboBox, 'comboBox')
         self.loadGroups()
         self.groupComboBox.currentIndexChanged.connect(self.onGroupChanged)
         
@@ -85,13 +85,14 @@ class ImageViewer(QWidget):
 
         self.container = QWidget()
         self.scrollArea.setWidget(self.container)
-        self.scrollArea.setFixedSize(1200, 780)
-        self.scrollArea.move(200,0)
+        self.scrollArea.move(200, 0)
         self.layout = QGridLayout(self.container)
+        self.layout.setSpacing(10)  # 设置网格间距
         self.container.setLayout(self.layout)
 
         self.loadImages()
-        self.setGeometry(100, 100, 1400, 800)  
+        
+        # 添加这行来显示窗口
         self.show()
 
     def loadGroups(self):
@@ -157,6 +158,28 @@ class ImageViewer(QWidget):
             if col == 7:
                 col = 0
                 row += 1
+        
+        # 计算一行需要的宽度（7个图片 + 间距）
+        total_width = 7 * 170 + 8 * self.layout.spacing()  # 7个图片宽度 + 8个间距
+        
+        # 计算需要的总高度（最多显示5行）
+        total_rows = min(5, max(1, (len(image_files) + 6) // 7))  # 限制最多5行，至少1行
+        needed_height = total_rows * 150 + (total_rows + 1) * self.layout.spacing()
+        
+        # 设置容器的最小宽度，确保内容不会被压缩
+        self.container.setMinimumWidth(total_width)
+        
+        # 设置滚动区域的大小，水平方向不设置固定值
+        self.scrollArea.setFixedHeight(needed_height)  # 只固定高度
+        self.scrollArea.setMinimumWidth(total_width)  # 设置最小宽度
+        
+        # 调整窗口大小（考虑左侧ComboBox的宽度）
+        window_width = total_width + 240  # 200是ComboBox区域宽度，加上一些边距
+        window_height = needed_height + 20
+        self.setGeometry(100, 100, window_width, window_height)
+        
+        # 禁用水平滚动条
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def copyImageToClipboard(self, event, label):
         clipboard = QApplication.clipboard()
