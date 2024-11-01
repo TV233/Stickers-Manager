@@ -1,9 +1,12 @@
 import os
 import glob
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QComboBox, QDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QComboBox, QDialog, QHBoxLayout, QVBoxLayout
 from PyQt5.QtGui import QPixmap, QClipboard, QMovie
 from PyQt5.QtCore import Qt, QMimeData, QUrl, QTimer
 from PyQt5 import uic
+from PyQt5.QtCore import pyqtSignal
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 class PreviewDialog(QDialog):
     def __init__(self, image_path, parent=None):
@@ -66,120 +69,193 @@ class ImageLabel(QLabel):
             
         self.preview_dialog.show()
 
+class GroupButton(QWidget):
+    clicked = pyqtSignal(str)  # 自定义信号，传递组名
+    
+    def __init__(self, group_name, preview_path, parent=None):
+        super().__init__(parent)
+        self.group_name = group_name  # 直接保存组名
+        
+        # 设置固定高度
+        self.setFixedHeight(40)
+        
+        layout = QHBoxLayout(self)
+        layout.setSpacing(5)
+        layout.setContentsMargins(5, 2, 5, 2)
+        
+        # 预览图
+        preview_label = QLabel()
+        pixmap = QPixmap(preview_path)
+        scaled_pixmap = pixmap.scaled(30, 30, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        preview_label.setPixmap(scaled_pixmap)
+        preview_label.setFixedSize(30, 30)
+        
+        # 组名标签
+        name_label = QLabel(group_name)
+        
+        layout.addWidget(preview_label)
+        layout.addWidget(name_label)
+        layout.addStretch()
+        
+        # 设置样式
+        self.setStyleSheet("""
+            GroupButton {
+                background-color: #f0f0f0;
+                border-radius: 5px;
+                padding: 5px;
+            }
+            GroupButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            print(f"Clicked group: {self.group_name}")  # 调试输出
+            self.clicked.emit(self.group_name)
+            super().mousePressEvent(event)
+
 class ImageViewer(QWidget):
     def __init__(self):
         super().__init__()
+        self.current_group = None
+        self.thread_pool = ThreadPoolExecutor(max_workers=4)  # 创建线程池
         self.initUI()
 
     def initUI(self):
-        uic.loadUi('k.ui', self)  # 加载UI文件
         self.setWindowTitle('Stickers Manager Beta')
         
-        # 使用UI文件中的ComboBox
-        self.groupComboBox = self.findChild(QComboBox, 'comboBox')
-        self.loadGroups()
-        self.groupComboBox.currentIndexChanged.connect(self.onGroupChanged)
+        # 创建主布局
+        main_layout = QHBoxLayout(self)
+        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(10, 10, 10, 10)
         
-        self.scrollArea = QScrollArea(self)
-        self.scrollArea.setWidgetResizable(True)
-
-        self.container = QWidget()
-        self.scrollArea.setWidget(self.container)
-        self.scrollArea.move(200, 0)
-        self.layout = QGridLayout(self.container)
-        self.layout.setSpacing(10)  # 设置网格间距
-        self.container.setLayout(self.layout)
-
-        self.loadImages()
+        # 创建左侧分组面板
+        group_panel = QWidget()
+        group_layout = QVBoxLayout(group_panel)
+        group_layout.setSpacing(5)
+        group_layout.setContentsMargins(5, 5, 5, 5)
         
-        # 添加这行来显示窗口
-        self.show()
-
-    def loadGroups(self):
-        # 获取data目录下的所有文件夹
+        # 加载分组
         data_path = 'data'
-        groups = []
-        # 遍历data目录下的所有项目
-        for item in os.listdir(data_path):
-            item_path = os.path.join(data_path, item)
-            # 只添加文件夹
-            if os.path.isdir(item_path):
-                groups.append(item)
+        groups = sorted(os.listdir(data_path))
+        for group_name in groups:
+            group_path = os.path.join(data_path, group_name)
+            if os.path.isdir(group_path):
+                # 获取第一个图片作为预览
+                preview_path = None
+                for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']:
+                    files = glob.glob(os.path.join(group_path, ext))
+                    if files:
+                        preview_path = files[0]
+                        break
+                
+                if preview_path:
+                    group_btn = GroupButton(group_name, preview_path)
+                    group_btn.clicked.connect(self.onGroupSelected)
+                    group_layout.addWidget(group_btn)
         
-        # 排序文件夹名称
-        groups.sort()
+        group_layout.addStretch()
+        group_panel.setFixedWidth(200)
         
-        self.groupComboBox.clear()  # 清除UI中的默认项
-        self.groupComboBox.addItems(groups)
-
-    def onGroupChanged(self, index):
-        # 当选择的组发生变化时，清除现有图片并加载新组的图片
-        self.clearImages()
-        self.loadImages()
+        # 创建滚动区域
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setWidgetResizable(True)
+        self.container = QWidget()
+        self.layout = QGridLayout(self.container)
+        self.layout.setSpacing(10)
+        self.scrollArea.setWidget(self.container)
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        main_layout.addWidget(group_panel)
+        main_layout.addWidget(self.scrollArea)
+        
+        # 设置初始大小
+        self.setMinimumSize(1200, 600)
+        
+        # 加载默认分组的图片
+        if groups:
+            self.current_group = groups[0]
+            self.loadImages()
+        
+        self.show()
+    
+    def onGroupSelected(self, group_name):
+        print(f"Switching to group: {group_name}")  # 调试输出
+        if self.current_group != group_name:
+            self.current_group = group_name
+            self.clearImages()
+            self.loadImages()
+            print(f"Switched to group: {self.current_group}")  # 调试输出
 
     def clearImages(self):
-        # 清除所有现有的图片
+        print("Clearing images")  # 调试输出
         while self.layout.count():
             item = self.layout.takeAt(0)
             widget = item.widget()
             if widget:
                 widget.deleteLater()
+        print("Images cleared")  # 调试输出
 
     def loadImages(self):
-        # 获取当前选中的组
-        current_group = self.groupComboBox.currentText()
-        image_folder = os.path.join('data', current_group)
-        
-        # 支持多种图片格式
+        if not self.current_group:
+            return
+            
+        image_folder = os.path.join('data', self.current_group)
         image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']
         image_files = []
         
-        # 获取所有支持格式的图片文件
         for ext in image_extensions:
             image_files.extend(glob.glob(os.path.join(image_folder, ext)))
         
+        # 计算布局参数
+        total_width = 7 * 170 + 8 * self.layout.spacing()
+        total_rows = min(5, max(1, (len(image_files) + 6) // 7))
+        needed_height = total_rows * 150 + (total_rows + 1) * self.layout.spacing()
+        
+        # 设置容器和滚动区域大小
+        self.container.setMinimumWidth(total_width)
+        self.scrollArea.setFixedHeight(needed_height)
+        self.scrollArea.setMinimumWidth(total_width)
+        
+        # 创建占位网格
         row = 0
         col = 0
-
-        for image_file in image_files:
+        placeholders = []
+        for i in range(len(image_files)):
             label = ImageLabel(self)
-            label.original_image_path = image_file
-            
-            # 显示缩略图
-            pixmap = QPixmap(image_file)
-            scaled_pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            label.setPixmap(scaled_pixmap)
-            label.static_pixmap = scaled_pixmap
             label.setFixedSize(170, 150)
-            label.mousePressEvent = lambda event, label=label: self.copyImageToClipboard(event, label)
             self.layout.addWidget(label, row, col)
-
+            placeholders.append((label, image_files[i]))
+            
             col += 1
             if col == 7:
                 col = 0
                 row += 1
         
-        # 计算一行需要的宽度（7个图片 + 间距）
-        total_width = 7 * 170 + 8 * self.layout.spacing()  # 7个图片宽度 + 8个间距
+        # 分批加载图片
+        def load_image(args):
+            label, image_file = args
+            pixmap = QPixmap(image_file)
+            scaled_pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            return label, image_file, scaled_pixmap
         
-        # 计算需要的总高度（最多显示5行）
-        total_rows = min(5, max(1, (len(image_files) + 6) // 7))  # 限制最多5行，至少1行
-        needed_height = total_rows * 150 + (total_rows + 1) * self.layout.spacing()
+        def update_image(result):
+            label, image_file, scaled_pixmap = result
+            label.setPixmap(scaled_pixmap)
+            label.original_image_path = image_file
+            label.static_pixmap = scaled_pixmap
+            label.mousePressEvent = partial(self.copyImageToClipboard, label=label)
         
-        # 设置容器的最小宽度，确保内容不会被压缩
-        self.container.setMinimumWidth(total_width)
-        
-        # 设置滚动区域的大小，水平方向不设置固定值
-        self.scrollArea.setFixedHeight(needed_height)  # 只固定高度
-        self.scrollArea.setMinimumWidth(total_width)  # 设置最小宽度
-        
-        # 调整窗口大小（考虑左侧ComboBox的宽度）
-        window_width = total_width + 240  # 200是ComboBox区域宽度，加上一些边距
-        window_height = needed_height + 20
-        self.setGeometry(100, 100, window_width, window_height)
-        
-        # 禁用水平滚动条
-        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # 使用线程池加载图片
+        batch_size = 20  # 每批加载的图片数量
+        for i in range(0, len(placeholders), batch_size):
+            batch = placeholders[i:i + batch_size]
+            futures = [self.thread_pool.submit(load_image, args) for args in batch]
+            for future in futures:
+                result = future.result()
+                update_image(result)
+                QApplication.processEvents()  # 让界面保持响应
 
     def copyImageToClipboard(self, event, label):
         clipboard = QApplication.clipboard()
