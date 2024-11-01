@@ -212,38 +212,31 @@ class ImageViewer(QWidget):
         self.show()
     
     def onGroupSelected(self, group_name):
-        if self.loading:  # 如果正在加载，忽略点击
+        if self.loading or self.current_group == group_name:  # 避免重复加载相同分组
             return
         
         print(f"Switching to group: {group_name}")
-        if self.current_group != group_name:
-            try:
-                self.loading = True  # 设置加载状态
-                self.current_group = group_name
-                self.disableGroupButtons()
-                
-                # 检查分组是否为空
-                image_folder = os.path.join('data', self.current_group)
-                has_images = False
-                for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']:
-                    if glob.glob(os.path.join(image_folder, ext)):
-                        has_images = True
-                        break
-                
-                if not has_images:
-                    QMessageBox.information(self, "提示", f"分组 '{self.current_group}' 中没有图片")
-                    return
-                
-                self.clearImages()
-                self.loadImages()
-                print(f"Successfully switched to group: {self.current_group}")
-                
-            except Exception as e:
-                print(f"Error during group switch: {e}")
-                QMessageBox.warning(self, "错误", f"切换分组时发生错误: {str(e)}")
-            finally:
-                self.enableGroupButtons()
-                self.loading = False  # 重置加载状态
+        try:
+            self.loading = True
+            self.current_group = group_name
+            
+            # 检查分组是否为空
+            image_folder = os.path.join('data', self.current_group)
+            has_images = any(glob.glob(os.path.join(image_folder, ext)) 
+                           for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp'])
+            
+            if not has_images:
+                QMessageBox.information(self, "提示", f"分组 '{self.current_group}' 中没有图片")
+                return
+            
+            self.clearImages()
+            self.loadImages()
+            
+        except Exception as e:
+            print(f"Error during group switch: {e}")
+            QMessageBox.warning(self, "错误", f"切换分组时发生错误: {str(e)}")
+        finally:
+            self.loading = False
 
     def disableGroupButtons(self):
         # 禁用所有分组按钮，防止连续快速点击
@@ -266,18 +259,15 @@ class ImageViewer(QWidget):
 
     def loadImages(self):
         if not self.current_group:
-            print("No current group")
             return
             
-        print(f"Loading images for group: {self.current_group}")  # 调试输出
+        print(f"Loading images for group: {self.current_group}")
         image_folder = os.path.join('data', self.current_group)
         image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']
         image_files = []
         
         for ext in image_extensions:
             image_files.extend(glob.glob(os.path.join(image_folder, ext)))
-        
-        print(f"Found {len(image_files)} images in {self.current_group}")  # 调试输出
         
         if not image_files:
             return
@@ -287,6 +277,18 @@ class ImageViewer(QWidget):
             row = 0
             col = 0
             placeholders = []
+            
+            # 预先计算布局参数
+            total_width = 7 * 170 + 8 * self.layout.spacing()
+            total_rows = min(5, max(1, (len(image_files) + 6) // 7))
+            needed_height = total_rows * 150 + (total_rows + 1) * self.layout.spacing()
+            
+            # 设置容器和滚动区域大小
+            self.container.setMinimumWidth(total_width)
+            self.scrollArea.setFixedHeight(needed_height)
+            self.scrollArea.setMinimumWidth(total_width)
+            
+            # 批量创建标签
             for i in range(len(image_files)):
                 label = ImageLabel(self)
                 label.setFixedSize(170, 150)
@@ -298,35 +300,25 @@ class ImageViewer(QWidget):
                     col = 0
                     row += 1
             
-            # 计算布局参数
-            total_width = 7 * 170 + 8 * self.layout.spacing()
-            total_rows = min(5, max(1, (len(image_files) + 6) // 7))
-            needed_height = total_rows * 150 + (total_rows + 1) * self.layout.spacing()
-            
-            # 设置容器和滚动区域大小
-            self.container.setMinimumWidth(total_width)
-            self.scrollArea.setFixedHeight(needed_height)
-            self.scrollArea.setMinimumWidth(total_width)
-            
-            # 立即加载图片，不使用线程池
-            for label, image_file in placeholders:
-                try:
-                    pixmap = QPixmap(image_file)
-                    scaled_pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                    label.setPixmap(scaled_pixmap)
-                    label.original_image_path = image_file
-                    label.static_pixmap = scaled_pixmap
-                    label.mousePressEvent = partial(self.copyImageToClipboard, label=label)
-                    QApplication.processEvents()  # 保持UI响应
-                except Exception as e:
-                    print(f"Error loading image {image_file}: {e}")
-                    continue
-            
-            print(f"Loaded {len(image_files)} images for {self.current_group}")  # 调试输出
+            # 使用更大的批次size加载图片
+            batch_size = 35  # 增加批次大小
+            for i in range(0, len(placeholders), batch_size):
+                batch = placeholders[i:i + batch_size]
+                for label, image_file in batch:
+                    try:
+                        pixmap = QPixmap(image_file)
+                        scaled_pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        label.setPixmap(scaled_pixmap)
+                        label.original_image_path = image_file
+                        label.static_pixmap = scaled_pixmap
+                        label.mousePressEvent = partial(self.copyImageToClipboard, label=label)
+                    except Exception as e:
+                        print(f"Error loading image {image_file}: {e}")
+                        continue
+                QApplication.processEvents()  # 每批次处理完后才更新UI
             
         except Exception as e:
             print(f"Error in loadImages: {e}")
-            raise  # 重新抛出异常以便调试
 
     def copyImageToClipboard(self, event, label):
         clipboard = QApplication.clipboard()
