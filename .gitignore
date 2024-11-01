@@ -15,3 +15,5 @@ __pycache__/
 *.ui.venv/
 
 venv/
+
+tempCodeRunnerFile.py

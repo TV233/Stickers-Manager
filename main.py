@@ -81,8 +81,11 @@ class ImageViewer(QWidget):
 
         for image_file in image_files:
             label = QLabel(self)
+            # 存储原始图片路径
+            label.original_image_path = image_file
+            # 显示缩略图
             pixmap = QPixmap(image_file)
-            pixmap = pixmap.scaled(170, 150, aspectRatioMode=True)
+            pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             label.setPixmap(pixmap)
             label.mousePressEvent = lambda event, label=label: self.copyImageToClipboard(event, label)
             self.layout.addWidget(label, row, col)
@@ -93,9 +96,10 @@ class ImageViewer(QWidget):
                 row += 1
 
     def copyImageToClipboard(self, event, label):
-        pixmap = label.pixmap()
+        # 使用原始图片路径加载完整分辨率的图片
+        original_pixmap = QPixmap(label.original_image_path)
         clipboard = QApplication.clipboard()
-        clipboard.setPixmap(pixmap, mode=QClipboard.Clipboard)
+        clipboard.setPixmap(original_pixmap, mode=QClipboard.Clipboard)
         event.accept()
 
 if __name__ == '__main__':
