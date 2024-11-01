@@ -1,9 +1,33 @@
 import os
 import glob
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QComboBox
-from PyQt5.QtGui import QPixmap, QClipboard
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap, QClipboard, QMovie
+from PyQt5.QtCore import Qt, QMimeData
 from PyQt5 import uic
+from PyQt5.QtCore import QUrl
+
+class ImageLabel(QLabel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.movie = None
+        self.static_pixmap = None
+        self.original_image_path = None
+
+    def enterEvent(self, event):
+        if self.original_image_path and self.original_image_path.lower().endswith('.gif'):
+            self.movie = QMovie(self.original_image_path)
+            self.movie.setScaledSize(self.size())
+            self.setMovie(self.movie)
+            self.movie.start()
+        event.accept()
+
+    def leaveEvent(self, event):
+        if self.movie:
+            self.movie.stop()
+            self.setMovie(None)
+            self.movie = None
+            self.setPixmap(self.static_pixmap)
+        event.accept()
 
 class ImageViewer(QWidget):
     def __init__(self):
@@ -80,13 +104,15 @@ class ImageViewer(QWidget):
         col = 0
 
         for image_file in image_files:
-            label = QLabel(self)
-            # 存储原始图片路径
+            label = ImageLabel(self)
             label.original_image_path = image_file
+            
             # 显示缩略图
             pixmap = QPixmap(image_file)
-            pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            label.setPixmap(pixmap)
+            scaled_pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            label.setPixmap(scaled_pixmap)
+            label.static_pixmap = scaled_pixmap
+            label.setFixedSize(170, 150)
             label.mousePressEvent = lambda event, label=label: self.copyImageToClipboard(event, label)
             self.layout.addWidget(label, row, col)
 
@@ -96,10 +122,26 @@ class ImageViewer(QWidget):
                 row += 1
 
     def copyImageToClipboard(self, event, label):
-        # 使用原始图片路径加载完整分辨率的图片
-        original_pixmap = QPixmap(label.original_image_path)
         clipboard = QApplication.clipboard()
-        clipboard.setPixmap(original_pixmap, mode=QClipboard.Clipboard)
+        
+        if label.original_image_path.lower().endswith('.gif'):
+            # 对于GIF图片，使用URI列表方式复制
+            mime_data = QMimeData()
+            file_path = os.path.abspath(label.original_image_path)
+            url = f"file:///{file_path.replace(os.sep, '/')}"
+            mime_data.setUrls([QUrl(url)])
+            
+            # 同时设置图片数据作为后备
+            with open(label.original_image_path, 'rb') as gif_file:
+                gif_data = gif_file.read()
+                mime_data.setData('image/gif', gif_data)
+            
+            clipboard.setMimeData(mime_data)
+        else:
+            # 非GIF图片直接使用原始图片
+            pixmap = QPixmap(label.original_image_path)
+            clipboard.setPixmap(pixmap)
+        
         event.accept()
 
 if __name__ == '__main__':
