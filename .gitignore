@@ -15,5 +15,19 @@ __pycache__/
 *.ui.venv/
 
 venv/
-
 tempCodeRunnerFile.py
+
+*.AppImage
+AppDir/
+
+build_config.py
+BUILD.md
+build.py
+build.sh
+create_ico copy.py
+create_ico.py
+
+build/
+dist/
+*.spec
+
