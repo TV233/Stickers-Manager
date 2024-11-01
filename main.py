@@ -1,6 +1,6 @@
 import os
 import glob
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QComboBox, QDialog, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGridLayout, QScrollArea, QComboBox, QDialog, QHBoxLayout, QVBoxLayout, QMessageBox
 from PyQt5.QtGui import QPixmap, QClipboard, QMovie
 from PyQt5.QtCore import Qt, QMimeData, QUrl, QTimer
 from PyQt5 import uic
@@ -38,7 +38,7 @@ class ImageLabel(QLabel):
         self.static_pixmap = None
         self.original_image_path = None
         self.preview_dialog = None
-        # 添加预览延时定时器
+        # 添加预览延时定时
         self.preview_timer = QTimer(self)
         self.preview_timer.setSingleShot(True)  # 设置为单次触发
         self.preview_timer.timeout.connect(self.showPreview)
@@ -74,7 +74,7 @@ class GroupButton(QWidget):
     
     def __init__(self, group_name, preview_path, parent=None):
         super().__init__(parent)
-        self.group_name = group_name  # 直接保存组名
+        self.group_name = group_name  # 直保存组名
         
         # 设置固定高度
         self.setFixedHeight(40)
@@ -85,9 +85,10 @@ class GroupButton(QWidget):
         
         # 预览图
         preview_label = QLabel()
-        pixmap = QPixmap(preview_path)
-        scaled_pixmap = pixmap.scaled(30, 30, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        preview_label.setPixmap(scaled_pixmap)
+        if preview_path:
+            pixmap = QPixmap(preview_path)
+            scaled_pixmap = pixmap.scaled(30, 30, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            preview_label.setPixmap(scaled_pixmap)
         preview_label.setFixedSize(30, 30)
         
         # 组名标签
@@ -119,7 +120,8 @@ class ImageViewer(QWidget):
     def __init__(self):
         super().__init__()
         self.current_group = None
-        self.thread_pool = ThreadPoolExecutor(max_workers=4)  # 创建线程池
+        self.thread_pool = ThreadPoolExecutor(max_workers=4)
+        self.loading = False  # 添加加载状态标志
         self.initUI()
 
     def initUI(self):
@@ -130,35 +132,64 @@ class ImageViewer(QWidget):
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(10, 10, 10, 10)
         
-        # 创建左侧分组面板
+        # 创建左侧分组面板的滚动区域
+        group_scroll = QScrollArea()
+        group_scroll.setWidgetResizable(True)
+        group_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        group_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        group_scroll.setFixedWidth(220)  # 稍微加宽以适应滚动条
+        
+        # 创建分组面板容器
         group_panel = QWidget()
         group_layout = QVBoxLayout(group_panel)
         group_layout.setSpacing(5)
         group_layout.setContentsMargins(5, 5, 5, 5)
+        group_layout.setAlignment(Qt.AlignTop)  # 确保按钮从顶部开始排列
         
-        # 加载分组
+        # 加载分组并打印调试信息
         data_path = 'data'
-        groups = sorted(os.listdir(data_path))
+        groups = []
+        # 获取所有文件夹并进行自然排序
+        for item in os.listdir(data_path):
+            item_path = os.path.join(data_path, item)
+            if os.path.isdir(item_path):
+                groups.append(item)
+        groups.sort()  # 自然排序
+        
+        print(f"Found {len(groups)} groups: {groups}")  # 调试输出
+        
+        added_buttons = 0  # 计数添加的按钮数量
         for group_name in groups:
             group_path = os.path.join(data_path, group_name)
-            if os.path.isdir(group_path):
-                # 获取第一个图片作为预览
-                preview_path = None
-                for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']:
-                    files = glob.glob(os.path.join(group_path, ext))
-                    if files:
-                        preview_path = files[0]
-                        break
-                
-                if preview_path:
-                    group_btn = GroupButton(group_name, preview_path)
-                    group_btn.clicked.connect(self.onGroupSelected)
-                    group_layout.addWidget(group_btn)
+            # 获取第一个图片作为预览
+            preview_path = None
+            for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']:
+                files = glob.glob(os.path.join(group_path, ext))
+                if files:
+                    preview_path = files[0]
+                    break
+            
+            # 只要是文件夹就添加按钮，不管是否找到预览图
+            group_btn = GroupButton(group_name, preview_path or '')  # 如果没有预览图，使用空字符串
+            group_btn.clicked.connect(self.onGroupSelected)
+            group_layout.addWidget(group_btn)
+            added_buttons += 1
+            print(f"Added button for group: {group_name}")  # 调试输出
         
-        group_layout.addStretch()
-        group_panel.setFixedWidth(200)
+        print(f"Total buttons added: {added_buttons}")  # 调试输出
         
-        # 创建滚动区域
+        # 设置分组面板的最小高度，确保足够显示所有按钮
+        total_height = added_buttons * 45  # 每个按钮40高度 + 5间距
+        group_panel.setMinimumHeight(total_height)
+        
+        # 设置滚动区域的内容
+        group_scroll.setWidget(group_panel)
+        
+        # 设置滚动区域的最大高度（与图片显示区域相同）
+        max_visible_height = 5 * 150 + 6 * 10  # 5行图片高度 + 间距
+        group_scroll.setMaximumHeight(max_visible_height)
+        
+        # 创建图片显示区域的滚动区域
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidgetResizable(True)
         self.container = QWidget()
@@ -167,7 +198,7 @@ class ImageViewer(QWidget):
         self.scrollArea.setWidget(self.container)
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         
-        main_layout.addWidget(group_panel)
+        main_layout.addWidget(group_scroll)
         main_layout.addWidget(self.scrollArea)
         
         # 设置初始大小
@@ -181,12 +212,48 @@ class ImageViewer(QWidget):
         self.show()
     
     def onGroupSelected(self, group_name):
-        print(f"Switching to group: {group_name}")  # 调试输出
+        if self.loading:  # 如果正在加载，忽略点击
+            return
+        
+        print(f"Switching to group: {group_name}")
         if self.current_group != group_name:
-            self.current_group = group_name
-            self.clearImages()
-            self.loadImages()
-            print(f"Switched to group: {self.current_group}")  # 调试输出
+            try:
+                self.loading = True  # 设置加载状态
+                self.current_group = group_name
+                self.disableGroupButtons()
+                
+                # 检查分组是否为空
+                image_folder = os.path.join('data', self.current_group)
+                has_images = False
+                for ext in ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']:
+                    if glob.glob(os.path.join(image_folder, ext)):
+                        has_images = True
+                        break
+                
+                if not has_images:
+                    QMessageBox.information(self, "提示", f"分组 '{self.current_group}' 中没有图片")
+                    return
+                
+                self.clearImages()
+                self.loadImages()
+                print(f"Successfully switched to group: {self.current_group}")
+                
+            except Exception as e:
+                print(f"Error during group switch: {e}")
+                QMessageBox.warning(self, "错误", f"切换分组时发生错误: {str(e)}")
+            finally:
+                self.enableGroupButtons()
+                self.loading = False  # 重置加载状态
+
+    def disableGroupButtons(self):
+        # 禁用所有分组按钮，防止连续快速点击
+        for button in self.findChildren(GroupButton):
+            button.setEnabled(False)
+
+    def enableGroupButtons(self):
+        # 重新启用所有分组按钮
+        for button in self.findChildren(GroupButton):
+            button.setEnabled(True)
 
     def clearImages(self):
         print("Clearing images")  # 调试输出
@@ -199,8 +266,10 @@ class ImageViewer(QWidget):
 
     def loadImages(self):
         if not self.current_group:
+            print("No current group")
             return
             
+        print(f"Loading images for group: {self.current_group}")  # 调试输出
         image_folder = os.path.join('data', self.current_group)
         image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp']
         image_files = []
@@ -208,54 +277,56 @@ class ImageViewer(QWidget):
         for ext in image_extensions:
             image_files.extend(glob.glob(os.path.join(image_folder, ext)))
         
-        # 计算布局参数
-        total_width = 7 * 170 + 8 * self.layout.spacing()
-        total_rows = min(5, max(1, (len(image_files) + 6) // 7))
-        needed_height = total_rows * 150 + (total_rows + 1) * self.layout.spacing()
+        print(f"Found {len(image_files)} images in {self.current_group}")  # 调试输出
         
-        # 设置容器和滚动区域大小
-        self.container.setMinimumWidth(total_width)
-        self.scrollArea.setFixedHeight(needed_height)
-        self.scrollArea.setMinimumWidth(total_width)
+        if not image_files:
+            return
         
-        # 创建占位网格
-        row = 0
-        col = 0
-        placeholders = []
-        for i in range(len(image_files)):
-            label = ImageLabel(self)
-            label.setFixedSize(170, 150)
-            self.layout.addWidget(label, row, col)
-            placeholders.append((label, image_files[i]))
+        try:
+            # 创建占位网格
+            row = 0
+            col = 0
+            placeholders = []
+            for i in range(len(image_files)):
+                label = ImageLabel(self)
+                label.setFixedSize(170, 150)
+                self.layout.addWidget(label, row, col)
+                placeholders.append((label, image_files[i]))
+                
+                col += 1
+                if col == 7:
+                    col = 0
+                    row += 1
             
-            col += 1
-            if col == 7:
-                col = 0
-                row += 1
-        
-        # 分批加载图片
-        def load_image(args):
-            label, image_file = args
-            pixmap = QPixmap(image_file)
-            scaled_pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            return label, image_file, scaled_pixmap
-        
-        def update_image(result):
-            label, image_file, scaled_pixmap = result
-            label.setPixmap(scaled_pixmap)
-            label.original_image_path = image_file
-            label.static_pixmap = scaled_pixmap
-            label.mousePressEvent = partial(self.copyImageToClipboard, label=label)
-        
-        # 使用线程池加载图片
-        batch_size = 20  # 每批加载的图片数量
-        for i in range(0, len(placeholders), batch_size):
-            batch = placeholders[i:i + batch_size]
-            futures = [self.thread_pool.submit(load_image, args) for args in batch]
-            for future in futures:
-                result = future.result()
-                update_image(result)
-                QApplication.processEvents()  # 让界面保持响应
+            # 计算布局参数
+            total_width = 7 * 170 + 8 * self.layout.spacing()
+            total_rows = min(5, max(1, (len(image_files) + 6) // 7))
+            needed_height = total_rows * 150 + (total_rows + 1) * self.layout.spacing()
+            
+            # 设置容器和滚动区域大小
+            self.container.setMinimumWidth(total_width)
+            self.scrollArea.setFixedHeight(needed_height)
+            self.scrollArea.setMinimumWidth(total_width)
+            
+            # 立即加载图片，不使用线程池
+            for label, image_file in placeholders:
+                try:
+                    pixmap = QPixmap(image_file)
+                    scaled_pixmap = pixmap.scaled(170, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                    label.setPixmap(scaled_pixmap)
+                    label.original_image_path = image_file
+                    label.static_pixmap = scaled_pixmap
+                    label.mousePressEvent = partial(self.copyImageToClipboard, label=label)
+                    QApplication.processEvents()  # 保持UI响应
+                except Exception as e:
+                    print(f"Error loading image {image_file}: {e}")
+                    continue
+            
+            print(f"Loaded {len(image_files)} images for {self.current_group}")  # 调试输出
+            
+        except Exception as e:
+            print(f"Error in loadImages: {e}")
+            raise  # 重新抛出异常以便调试
 
     def copyImageToClipboard(self, event, label):
         clipboard = QApplication.clipboard()
