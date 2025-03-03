@@ -1,9 +1,5 @@
 # Stickers Manager
 
-[English](#english) | [简体中文](#简体中文)
-
-## English
-
 ### Introduction
 Stickers Manager is a lightweight desktop application for managing and using image stickers. It provides an intuitive interface for organizing and quickly copying stickers to the clipboard.
 
@@ -25,7 +21,7 @@ Stickers Manager is a lightweight desktop application for managing and using ima
 ### Installation
 
 #### Method 1: Using AppImage (Recommended)
-1. Download the latest `StickersManager.AppImage` from [Releases](https://github.com/yourusername/Stickers-Manager/releases)
+1. Download the latest `StickersManager.AppImage` from [Releases](https://github.com/TV233/Stickers-Manager/releases)
 2. Make it executable:
    ```bash
    chmod +x StickersManager.AppImage
@@ -38,7 +34,7 @@ Stickers Manager is a lightweight desktop application for managing and using ima
 #### Method 2: From Source
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/Stickers-Manager.git
+   git clone https://github.com/TV233/Stickers-Manager.git
    cd Stickers-Manager
    ```
 2. Create and activate virtual environment:
