@@ -22,52 +22,40 @@ Stickers Manager is a lightweight desktop application for managing and using ima
 ### Installation / 安装方法
 
 #### For Windows / Windows 平台
-1. Download the latest release package from Releases
-从Releases下载最新版本
-2. Extract the package to your desired location
-将压缩包解压到目标位置
-3. Create a data folder in the same directory as the executable
-在exe文件同目录下创建data文件夹
-4. Place your sticker images in subfolders under the data directory
-将表情包图片放入data目录下的子文件夹中
-5. Run StickersManager.exe to start the application
-运行StickersManager.exe启动应用程序
+1. Download the latest release package from Releases / 从Releases下载最新版本
+2. Extract the package to your desired location / 将压缩包解压到目标位置
+3. Create a data folder in the same directory as the executable / 在exe文件同目录下创建data文件夹
+4. Place your sticker images in subfolders under the data directory / 将表情包图片放入data目录下的子文件夹中
+5. Run StickersManager.exe to start the application / 运行StickersManager.exe启动应用程序
 
 #### For Liunx / Linux 平台 
 #### Method 1: Using AppImage (Recommended) / 方法1：使用AppImage（推荐）
-1. Download the latest `StickersManager.AppImage` from [Releases](https://github.com/TV233/Stickers-Manager/releases)
-   从[Releases](https://github.com/TV233/Stickers-Manager/releases)下载最新的StickersManager.AppImage
-2. Make it executable:
-   赋予可执行权限：
+1. Download the latest `StickersManager.AppImage` from [Releases](https://github.com/TV233/Stickers-Manager/releases) / 从[Releases](https://github.com/TV233/Stickers-Manager/releases)下载最新的StickersManager.AppImage
+2. Make it executable: / 赋予可执行权限：
    ```bash
    chmod +x StickersManager.AppImage
    ```
-3. Run it:
-   运行：
+3. Run it: / 运行：
    ```bash
    ./StickersManager.AppImage
    ```
 
 #### Method 2: From Source / 方法2：从源码运行
-1. Clone the repository:
-   克隆仓库：
+1. Clone the repository: / 克隆仓库：
    ```bash
    git clone https://github.com/TV233/Stickers-Manager.git
    cd Stickers-Manager
    ```
-2. Create and activate virtual environment:
-   创建并激活虚拟环境：
+2. Create and activate virtual environment: / 创建并激活虚拟环境：
    ```bash
    python -m venv venv
    source venv/bin/activate
    ```
-3. Install dependencies:
-   安装依赖：
+3. Install dependencies: / 安装依赖：
    ```bash
    pip install -r requirements.txt
    ```
-4. Run the application:
-   运行应用程序：
+4. Run the application: / 运行应用程序：
    ```bash
    python main.py
    ```
