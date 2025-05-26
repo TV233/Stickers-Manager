@@ -7,6 +7,7 @@ import os
 import glob
 import json
 import shutil
+import sys
 
 # 这个类将掌管所有数据和逻辑，并暴露给QML
 class StickerManager(QObject):
@@ -370,7 +371,15 @@ class StickerManager(QObject):
 
     def _init_data_directory(self):
         """初始化数据目录结构"""
-        data_path = 'data'
+        # 获取应用程序包内的资源路径
+        if getattr(sys, 'frozen', False):
+            # 如果是打包后的应用
+            bundle_dir = os.path.dirname(sys.executable)
+            data_path = os.path.join(os.path.expanduser('~/Library/Application Support/StickerManager'), 'data')
+        else:
+            # 开发环境
+            data_path = 'data'
+            
         if not os.path.exists(data_path):
             os.makedirs(data_path)
             
