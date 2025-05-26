@@ -1,0 +1,3 @@
+module components
+StickerDelegate 1.0 StickerDelegate.qml
+GroupDelegate 1.0 GroupDelegate.qml 
