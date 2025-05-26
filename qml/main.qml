@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import "components" // 导入components目录下的组件
+import "./components" as Components
 
 ApplicationWindow {
     visible: true
@@ -10,6 +10,32 @@ ApplicationWindow {
     title: "Stickers Manager"
     minimumWidth: 800
     minimumHeight: 600
+
+    // 添加搜索栏
+    header: ToolBar {
+        RowLayout {
+            anchors.fill: parent
+            spacing: 10
+
+            TextField {
+                id: searchField
+                Layout.fillWidth: true
+                placeholderText: "搜索标签..."
+                onTextChanged: stickerManager.search(text)
+            }
+
+            CheckBox {
+                text: "仅当前分组"
+                checked: true
+                onCheckedChanged: stickerManager.set_search_scope(checked)
+            }
+
+            Button {
+                text: "清除"
+                onClicked: searchField.text = ""
+            }
+        }
+    }
 
     // 使用 SplitView 实现左右可拖拽的布局
     SplitView {
@@ -26,7 +52,7 @@ ApplicationWindow {
             ListView {
                 anchors.fill: parent
                 model: stickerManager.groups
-                delegate: GroupDelegate {}
+                delegate: Components.GroupDelegate {}
                 spacing: 2
             }
         }
@@ -43,7 +69,7 @@ ApplicationWindow {
                 model: stickerManager.currentStickers
                 cellWidth: 160
                 cellHeight: 160
-                delegate: StickerDelegate {}
+                delegate: Components.StickerDelegate {}
                 
                 // 添加边距
                 leftMargin: 10
