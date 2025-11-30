@@ -24,11 +24,39 @@ Stickers Manager is a lightweight desktop application for managing and using ima
 #### For Windows / Windows 平台
 1. Download the latest release package from Releases / 从Releases下载最新版本
 2. Extract the package to your desired location / 将压缩包解压到目标位置
-3. Create a data folder in the same directory as the executable / 在exe文件同目录下创建data文件夹
+3. Create a `data` folder in the same directory as the executable / 在exe文件同目录下创建`data`文件夹
 4. Place your sticker images in subfolders under the data directory / 将表情包图片放入data目录下的子文件夹中
 5. Run StickersManager.exe to start the application / 运行StickersManager.exe启动应用程序
 
-#### For Liunx / Linux 平台 
+##### From Source (Windows) / 从源码运行（Windows）
+1. Install Python 3.8+ / 安装 Python 3.8+
+2. Create and activate virtual environment / 创建并激活虚拟环境：
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\activate
+   ```
+3. Install dependencies / 安装依赖：
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Run / 运行：
+   ```bash
+   python main.py
+   ```
+
+##### Build (Windows) / 打包（Windows）
+1. Install cx-Freeze / 安装 cx-Freeze：
+   ```bash
+   pip install cx-Freeze
+   ```
+2. Build / 构建：
+   ```bash
+   python setup.py build
+   ```
+3. The executable is under `build/` / 可执行文件位于 `build/` 目录
+4. Ensure a `data` folder sits next to `StickersManager.exe` / 在 `StickersManager.exe` 同目录创建 `data` 文件夹并放置分组图片
+
+#### For Linux / Linux 平台 
 #### Method 1: Using AppImage (Recommended) / 方法1：使用AppImage（推荐）
 1. Download the latest `StickersManager.AppImage` from [Releases](https://github.com/TV233/Stickers-Manager/releases) / 从[Releases](https://github.com/TV233/Stickers-Manager/releases)下载最新的StickersManager.AppImage
 2. Make it executable: / 赋予可执行权限：
@@ -56,6 +84,11 @@ Stickers Manager is a lightweight desktop application for managing and using ima
    pip install -r requirements.txt
    ```
 4. Run the application: / 运行应用程序：
-   ```bash
-   python main.py
-   ```
+  ```bash
+  python main.py
+  ```
+
+### Data Directory / 数据目录位置
+- Development: `project-root/data` / 开发环境：项目根目录 `data`
+- Windows (packaged): `StickersManager.exe` 同目录的 `data` / Windows（打包）：`StickersManager.exe` 同级 `data`
+- macOS (packaged): `~/Library/Application Support/StickerManager/data` / macOS（打包）：`~/Library/Application Support/StickerManager/data`
