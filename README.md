@@ -45,16 +45,17 @@ Stickers Manager is a lightweight desktop application for managing and using ima
    ```
 
 ##### Build (Windows) / 打包（Windows）
-1. Install cx-Freeze / 安装 cx-Freeze：
+1. Install PyInstaller / 安装 PyInstaller：
    ```bash
-   pip install cx-Freeze
+   pip install pyinstaller
    ```
-2. Build / 构建：
+2. Build (onedir, recommended) / 构建（onedir 推荐）：
    ```bash
-   python setup.py build
+   pyinstaller --noconsole --onedir --name StickersManager --icon icon.ico --add-data "qml;qml" --hidden-import PyQt5.QtQml main.py
    ```
-3. The executable is under `build/` / 可执行文件位于 `build/` 目录
-4. Ensure a `data` folder sits next to `StickersManager.exe` / 在 `StickersManager.exe` 同目录创建 `data` 文件夹并放置分组图片
+3. Executable location / 可执行位置：`dist/StickersManager/`
+4. Create `data` folder next to the exe / 在 `dist/StickersManager/` 下创建 `data` 文件夹并放置分组图片
+5. One-file alternative / 单文件可选：将 `--onedir` 改为 `--onefile`
 
 #### For Linux / Linux 平台 
 #### Method 1: Using AppImage (Recommended) / 方法1：使用AppImage（推荐）
@@ -84,9 +85,9 @@ Stickers Manager is a lightweight desktop application for managing and using ima
    pip install -r requirements.txt
    ```
 4. Run the application: / 运行应用程序：
-  ```bash
-  python main.py
-  ```
+   ```bash
+   python main.py
+   ```
 
 ### Data Directory / 数据目录位置
 - Development: `project-root/data` / 开发环境：项目根目录 `data`
