@@ -10,8 +10,10 @@ if __name__ == '__main__':
     
     engine = QQmlApplicationEngine()
     
-    # 获取当前脚本所在目录的绝对路径
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False):
+        current_dir = os.path.dirname(sys.executable)
+    else:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 添加 QML 导入路径
     engine.addImportPath(os.path.join(current_dir, "qml"))
